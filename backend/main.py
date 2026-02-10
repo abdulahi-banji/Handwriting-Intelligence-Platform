@@ -11,7 +11,6 @@ import json
 import base64
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-import google.generativeai as genai
 from PIL import Image
 import io
 import pytesseract
@@ -37,8 +36,12 @@ ALGORITHM = "HS256"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:password@localhost:5432/handwriting_db")
 
+# Initialize Gemini client
+import google.generativeai as genai
+gemini_client = None
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
+    gemini_client = genai.GenerativeModel('gemini-1.5-flash')
 
 security = HTTPBearer()
 
@@ -117,7 +120,7 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.JWTError:
+    except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 # --- Pydantic Models ---
@@ -393,18 +396,17 @@ async def get_stats(payload=Depends(verify_token), db=Depends(get_db)):
 
 # --- AI Processing Helpers ---
 async def analyze_handwriting_style(ocr_text: str, image_bytes: bytes) -> dict:
-    if not GEMINI_API_KEY:
+    if not gemini_client:
         return {"font_style": "casual-handwritten", "slant": "slight-right", "size": "medium", "spacing": "relaxed", "pressure": "medium"}
     
     try:
-        model = genai.GenerativeModel("gemini-1.5-flash")
         prompt = f"""Analyze this handwriting sample OCR text and return a JSON object with writing style characteristics.
 OCR Text: {ocr_text[:500]}
 
 Return ONLY valid JSON like:
 {{"font_style": "casual/formal/print/cursive", "slant": "left/upright/slight-right/right", "size": "small/medium/large", "spacing": "tight/normal/relaxed", "pressure": "light/medium/heavy", "style_description": "brief description"}}"""
         
-        response = model.generate_content(prompt)
+        response = gemini_client.generate_content(prompt)
         text = response.text.strip()
         if text.startswith("```"):
             text = text.split("```")[1].replace("json", "").strip()
@@ -438,7 +440,7 @@ async def extract_text_from_file(contents: bytes, ext: str, content_type: str) -
     return contents.decode("utf-8", errors="ignore")
 
 async def process_with_gemini(text: str, style_data: dict, subject: str) -> str:
-    if not GEMINI_API_KEY:
+    if not gemini_client:
         # Return nicely structured demo content
         return f"""📚 {subject} Notes
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -454,7 +456,6 @@ Key Takeaways:
 """
     
     try:
-        model = genai.GenerativeModel("gemini-1.5-flash")
         style_desc = style_data.get("style_description", "casual handwritten") if style_data else "student-friendly"
         
         prompt = f"""You are an expert note-taking assistant. Transform the following content into well-structured, 
@@ -475,10 +476,12 @@ Create structured notes with:
 6. Use emojis sparingly for visual interest
 7. Keep a conversational, student-friendly tone
 8. Use --- for section dividers
+9. Keep adequate space within sections
+10. you can add things like stickers that will make it appealing 
 
 Format it as if written in a notebook. Make it engaging and memorable."""
         
-        response = model.generate_content(prompt)
+        response = gemini_client.generate_content(prompt)
         return response.text
     except Exception as e:
         return f"[Gemini processing failed: {str(e)}]\n\nOriginal content:\n{text}"
@@ -486,3 +489,4 @@ Format it as if written in a notebook. Make it engaging and memorable."""
 @app.get("/")
 async def root():
     return {"message": "Handwriting Intelligence Platform API", "version": "1.0.0", "docs": "/docs"}
+
