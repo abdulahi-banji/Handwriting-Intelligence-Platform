@@ -1,1 +1,8 @@
 node_modules/
+
+# Environment variables — NEVER commit .env files
+backend/.env
+frontend/.env
+.env
+.env.local
+.env.*.local
