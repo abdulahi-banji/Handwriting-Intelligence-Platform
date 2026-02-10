@@ -1,4 +1,4 @@
-# ✏️ Scribble AI — Handwriting Intelligence Platform
+# — Handwriting Intelligence Platform
 
 Welcome — this repo is a tiny full-stack app that helps you extract text from handwriting, analyze writing style, and generate nicely formatted notes. Think of it as a playground for OCR + small-scale AI-driven text processing.
 
