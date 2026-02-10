@@ -1,6 +1,6 @@
 # — Handwriting Intelligence Platform
 
-Welcome — this repo is a tiny full-stack app that helps you extract text from handwriting, analyze writing style, and generate nicely formatted notes. Think of it as a playground for OCR + small-scale AI-driven text processing.
+Welcome — this repo is a  full-stack app that helps you extract text from handwriting, analyze writing style, and generate nicely formatted notes. Think of it as a playground for OCR + small-scale AI-driven text processing.
 
 Where things live
 - `backend/` — FastAPI service (Python)
@@ -29,4 +29,3 @@ Need more help?
 - Full setup and troubleshooting: `docs/SETUP.md`
 - API reference: `docs/API.md`
 
-If you want, I can tidy these docs further or prepare a branch/PR for you to review before you push.
