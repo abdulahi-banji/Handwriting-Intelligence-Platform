@@ -665,7 +665,7 @@ h1, h2, h3, h4 {
 .note-content-area::before {
   content: '';
   position: absolute;
-  left: 68px;
+  left: 56px;
   top: 0;
   bottom: 0;
   width: 2px;

@@ -36,8 +36,21 @@ export default function DashboardPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const hour = new Date().getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+  const [greeting, setGreeting] = useState('')
+  const [currentTime, setCurrentTime] = useState(new Date())
+
+  useEffect(() => {
+    const updateGreeting = () => {
+      const hour = new Date().getHours()
+      const newGreeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+      setGreeting(newGreeting)
+      setCurrentTime(new Date())
+    }
+    
+    updateGreeting()
+    const interval = setInterval(updateGreeting, 60000) // Update every minute
+    return () => clearInterval(interval)
+  }, [])
 
   if (loading) {
     return (

@@ -107,7 +107,7 @@ export default function LoginPage() {
           border: '1.5px dashed var(--yellow)', fontSize: '0.78rem',
           color: 'var(--ink-light)', fontFamily: 'var(--font-note)'
         }}>
-          💡 <strong>First time?</strong> Register an account above — no credit card needed!
+          💡 <strong>First time?</strong> Register an account above!!
         </div>
       </div>
     </div>
