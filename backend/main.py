@@ -16,37 +16,48 @@ import io
 import pytesseract
 import psycopg2
 from psycopg2.extras import RealDictCursor
-import time
 
 load_dotenv()
-
-app = FastAPI(title="Handwriting Intelligence Platform", version="1.0.0")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # --- Config ---
 SECRET_KEY = os.getenv("SECRET_KEY", "supersecret-dev-key-change-in-prod")
 ALGORITHM = "HS256"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:password@localhost:5432/handwriting_db")
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+
+# CORS allowed origins (comma-separated for production)
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
+# Add Render default domain patterns
+RENDER_EXTERNAL_URL = os.getenv("RENDER_EXTERNAL_URL", "")
+if RENDER_EXTERNAL_URL and RENDER_EXTERNAL_URL not in CORS_ORIGINS:
+    CORS_ORIGINS.append(f"https://{RENDER_EXTERNAL_URL}")
+
+app = FastAPI(title="Handwriting Intelligence Platform", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Initialize Gemini client
 import google.generativeai as genai
 gemini_client = None
 if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-    gemini_client = genai.GenerativeModel('gemini-1.5-flash')
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        gemini_client = genai.GenerativeModel('gemini-1.5-flash')
+    except Exception as e:
+        print(f"⚠️  Gemini client init failed: {e}")
 
 security = HTTPBearer()
 
 # --- DB Connection ---
 def get_db():
+    if not DATABASE_URL:
+        raise HTTPException(status_code=503, detail="Database not configured")
     conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     try:
         yield conn
@@ -54,6 +65,9 @@ def get_db():
         conn.close()
 
 def init_db():
+    if not DATABASE_URL:
+        print("⚠️  DATABASE_URL not set, skipping DB init")
+        return
     try:
         conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
