@@ -13,9 +13,15 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from PIL import Image
 import io
-import pytesseract
 import psycopg2
 from psycopg2.extras import RealDictCursor
+
+# Try to import pytesseract, but don't fail if not available
+try:
+    import pytesseract
+    TESSERACT_AVAILABLE = True
+except ImportError:
+    TESSERACT_AVAILABLE = False
 
 load_dotenv()
 
@@ -25,12 +31,8 @@ ALGORITHM = "HS256"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 
-# CORS allowed origins (comma-separated for production)
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
-# Add Render default domain patterns
-RENDER_EXTERNAL_URL = os.getenv("RENDER_EXTERNAL_URL", "")
-if RENDER_EXTERNAL_URL and RENDER_EXTERNAL_URL not in CORS_ORIGINS:
-    CORS_ORIGINS.append(f"https://{RENDER_EXTERNAL_URL}")
+# CORS allowed origins - allow all for now, can be restricted in production
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
 
 app = FastAPI(title="Handwriting Intelligence Platform", version="1.0.0")
 
@@ -49,15 +51,19 @@ if GEMINI_API_KEY:
     try:
         genai.configure(api_key=GEMINI_API_KEY)
         gemini_client = genai.GenerativeModel('gemini-1.5-flash')
+        print("✅ Gemini client initialized")
     except Exception as e:
         print(f"⚠️  Gemini client init failed: {e}")
+
+if not TESSERACT_AVAILABLE:
+    print("⚠️  Tesseract OCR not available - OCR features will be limited")
 
 security = HTTPBearer()
 
 # --- DB Connection ---
 def get_db():
     if not DATABASE_URL:
-        raise HTTPException(status_code=503, detail="Database not configured")
+        raise HTTPException(status_code=503, detail="Database not configured. Please set DATABASE_URL environment variable.")
     conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     try:
         yield conn
@@ -208,16 +214,17 @@ async def upload_sample(
 ):
     contents = await file.read()
     
-    # OCR Processing
-    try:
-        image = Image.open(io.BytesIO(contents))
-        ocr_text = pytesseract.image_to_string(image)
-        
-        # Analyze writing characteristics via Gemini
-        style_data = await analyze_handwriting_style(ocr_text, contents)
-    except Exception as e:
-        ocr_text = ""
-        style_data = {"font_style": "casual", "slant": "upright", "size": "medium", "spacing": "normal"}
+    # OCR Processing with graceful fallback
+    ocr_text = ""
+    style_data = {"font_style": "casual", "slant": "upright", "size": "medium", "spacing": "normal"}
+    
+    if TESSERACT_AVAILABLE:
+        try:
+            image = Image.open(io.BytesIO(contents))
+            ocr_text = pytesseract.image_to_string(image)
+            style_data = await analyze_handwriting_style(ocr_text, contents)
+        except Exception as e:
+            print(f"⚠️  OCR processing failed: {e}")
     
     img_b64 = base64.b64encode(contents).decode()
     sample_id = str(uuid.uuid4())
@@ -233,7 +240,7 @@ async def upload_sample(
     return {
         "id": sample_id,
         "sample_name": sample_name,
-        "ocr_text": ocr_text[:200],
+        "ocr_text": ocr_text[:200] if ocr_text else "OCR not available",
         "style_data": style_data,
         "message": "Handwriting sample processed successfully!"
     }
@@ -428,6 +435,16 @@ Return ONLY valid JSON like:
     except:
         return {"font_style": "casual-handwritten", "slant": "slight-right", "size": "medium", "spacing": "relaxed", "pressure": "medium"}
 
+def extract_text_with_ocr(image: Image.Image) -> str:
+    """Extract text from image using pytesseract with graceful fallback"""
+    if not TESSERACT_AVAILABLE:
+        return ""
+    try:
+        return pytesseract.image_to_string(image)
+    except Exception as e:
+        print(f"⚠️  Tesseract OCR error: {e}")
+        return ""
+
 async def extract_text_from_file(contents: bytes, ext: str, content_type: str) -> str:
     if ext in ["txt", "md"]:
         return contents.decode("utf-8", errors="ignore")
@@ -435,21 +452,28 @@ async def extract_text_from_file(contents: bytes, ext: str, content_type: str) -
     if ext in ["jpg", "jpeg", "png", "webp", "gif"]:
         try:
             image = Image.open(io.BytesIO(contents))
-            return pytesseract.image_to_string(image)
-        except:
-            return "Could not extract text from image."
+            text = extract_text_with_ocr(image)
+            return text if text else "OCR not available. Please enter text manually."
+        except Exception as e:
+            return f"Could not process image: {str(e)}"
     
     if ext == "pdf":
         try:
             import pdfplumber
             with pdfplumber.open(io.BytesIO(contents)) as pdf:
-                return "\n\n".join(page.extract_text() or "" for page in pdf.pages)
+                text = "\n\n".join(page.extract_text() or "" for page in pdf.pages)
+                if text.strip():
+                    return text
         except:
-            try:
-                image = Image.open(io.BytesIO(contents))
-                return pytesseract.image_to_string(image)
-            except:
-                return "Could not extract text from PDF."
+            pass
+        
+        # Fallback to image-based extraction
+        try:
+            image = Image.open(io.BytesIO(contents))
+            text = extract_text_with_ocr(image)
+            return text if text else "PDF processing failed. Please enter text manually."
+        except:
+            return "Could not process PDF. Please enter text manually."
     
     return contents.decode("utf-8", errors="ignore")
 

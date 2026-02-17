@@ -4,7 +4,7 @@ services:
     name: handwriting-backend
     env: python
     region: oregon
-    buildCommand: pip install -r requirements.txt
+    buildCommand: cd backend && pip install -r requirements.txt
     startCommand: gunicorn main:app --workers 4 --bind 0.0.0.0:$PORT
     envVars:
       - key: DATABASE_URL
@@ -14,20 +14,15 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: CORS_ORIGINS
-        value: "http://localhost:5173,http://localhost:3000"
-      - key: RENDER_EXTERNAL_URL
-        fromService:
-          type: web
-          name: handwriting-backend
-          envVarName: RENDER_EXTERNAL_URL
+        sync: false
 
   # Frontend Static Site
-  - type: web
+  - type: static
     name: handwriting-frontend
     env: static
     region: oregon
     buildCommand: cd frontend && npm install && npm run build
-    path: frontend/dist
+    publishDir: frontend/dist
     envVars:
       - key: VITE_API_URL
         value: https://handwriting-backend.onrender.com/api
