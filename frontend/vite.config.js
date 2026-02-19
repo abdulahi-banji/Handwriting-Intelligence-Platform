@@ -1,23 +1,24 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// Get API URL safely - only available at runtime, not at config load time
-const getApiUrl = () => {
-  if (typeof process !== 'undefined' && process.env && process.env.VITE_API_URL) {
-    return process.env.VITE_API_URL
-  }
-  return 'http://localhost:8000'
-}
-
-export default defineConfig({
-  plugins: [react()],
-  base: '/',
-  server: {
-    port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
+export default defineConfig(({ mode }) => {
+  // Load env file based on mode
+  const env = loadEnv(mode, process.cwd(), '')
+  
+  return {
+    plugins: [react()],
+    base: '/',
+    define: {
+      // Make sure VITE_API_URL is available at build time
+      'import.meta.env.VITE_API_URL': JSON.stringify(env.VITE_API_URL || '')
+    },
+    server: {
+      port: 5173,
+      proxy: {
+        '/api': {
+          target: 'http://localhost:8000',
+          changeOrigin: true,
+        }
       }
     }
   }

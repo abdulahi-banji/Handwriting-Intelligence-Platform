@@ -14,7 +14,11 @@ export function AuthProvider({ children }) {
     if (token) {
       api.get('/auth/me')
         .then(res => setUser(res.data))
-        .catch(() => { localStorage.removeItem('token'); localStorage.removeItem('user') })
+        .catch(() => { 
+          // If API fails, still allow login by clearing token
+          localStorage.removeItem('token'); 
+          localStorage.removeItem('user') 
+        })
         .finally(() => setLoading(false))
     } else {
       setLoading(false)

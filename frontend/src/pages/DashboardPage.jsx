@@ -42,7 +42,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const updateGreeting = () => {
       const hour = new Date().getHours()
-      const newGreeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+      const newGreeting = hour < 12 ? 'Good Morning..' : hour < 17 ? 'Good Afternoon..' : 'Good Evening..'
       setGreeting(newGreeting)
       setCurrentTime(new Date())
     }

@@ -1,10 +1,22 @@
 import axios from 'axios'
 
-// Use environment variable for production, fallback to relative path for dev
-const baseURL = import.meta.env.VITE_API_URL || '/api';
+// Determine the base URL based on environment
+// In production (Vercel), we MUST have VITE_API_URL set in Vercel dashboard
+// In development, use relative path or localhost
+const getBaseURL = () => {
+  // Check if we're in production (Vite sets this automatically)
+  if (import.meta.env.PROD) {
+    // Production: use the environment variable
+    // NOTE: For production, you MUST set VITE_API_URL in Vercel dashboard
+    return import.meta.env.VITE_API_URL || ''
+  }
+  
+  // Development: use relative path (Vite proxy) or localhost
+  return import.meta.env.VITE_API_URL || '/api'
+}
 
 const api = axios.create({
-  baseURL: baseURL,
+  baseURL: getBaseURL(),
   timeout: 60000,
 })
 

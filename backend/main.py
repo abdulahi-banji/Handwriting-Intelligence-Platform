@@ -265,6 +265,7 @@ async def generate_note(
     sample_id: Optional[str] = Form(None),
     payload=Depends(verify_token),
     db=Depends(get_db)
+
 ):
     contents = await file.read()
     file_ext = file.filename.split(".")[-1].lower() if file.filename else "txt"
