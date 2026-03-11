@@ -26,7 +26,10 @@ except ImportError:
 load_dotenv()
 
 # --- Config ---
-SECRET_KEY = os.getenv("SECRET_KEY", "supersecret-dev-key-change-in-prod")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY environment variable is required. Please set it in production.")
+
 ALGORITHM = "HS256"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 DATABASE_URL = os.getenv("DATABASE_URL", "")
