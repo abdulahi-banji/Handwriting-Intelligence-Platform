@@ -1,37 +1,26 @@
 node_modules/
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-venv/
-.venv/
-env/
-ENV/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+# Dependencies
+/backend/venv*/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/venv*/
+**/env/
+**/.venv/
+**/*.egg-info/
 
-# Environment variables — NEVER commit .env files
+# Environment
 backend/.env
-frontend/.env
-.env
-.env.local
-.env.*.local
+.env*
+frontend/.env*.local
+
+# Logs & Temp
+*.log
+.DS_Store
+Thumbs.db
+
 
 # IDE
 .vscode/
