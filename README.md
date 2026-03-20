@@ -142,4 +142,4 @@ Please open an issue or submit a pull request.
 
 # License
 
-MIT License
+MIT License. 
