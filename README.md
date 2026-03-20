@@ -30,7 +30,7 @@ Backend
 - Python
 
 Machine Learning
-- OCR
+- Optical Character Recognition (OCR) 
 - Handwriting style modeling
 
 Database
