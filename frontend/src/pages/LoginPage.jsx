@@ -69,16 +69,16 @@ export default function LoginPage() {
             <label className="form-label">Password 🔑</label>
             <input
               className="form-input"
-              type="password"
-              placeholder="Your password"
-              value={form.password}
-              onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
+              type = "password"
+              placeholder = "Your password"
+              value = {form.password}
+              onChange = {e => setForm(p => ({ ...p, password: e.target.value }))}
             />
           </div>
 
           <button
-            type="submit"
-            className="btn btn-primary"
+            type = "submit"
+            className = "btn btn-primary"
             disabled={loading}
             style={{ width: '100%', justifyContent: 'center', marginTop: 4 }}
           >
@@ -99,6 +99,32 @@ export default function LoginPage() {
             Create one →
           </Link>
         </p>
+
+        {/* For the guest user */}
+        <button
+          type="button"
+          className="btn btn-outline"
+          onClick={async () => {
+            setLoading(true)
+            try {
+              await login('guest@test.com', 'guest')
+              toast.success('Welcome, Guest! 👋 Explore without account')
+              navigate('/dashboard')
+            } catch {
+              // Mock localStorage directly if API fails
+              localStorage.setItem('token', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5M2E4NmNlYi1kYWJjLTQ1NmYtOGU1YS0zMjcyZTViN2JjY2MiLCJlbWFpbCI6ImRlbW9AdGVzdC5jb20iLCJleHAiOjE5OTk5OTk5OTk5fQ.dummy_guest')
+              localStorage.setItem('user', JSON.stringify({id:'93a86ceb-dabc-456f-8e5a-3272e5b7bccc', email:'guest@test.com', username:'Guest'}))
+              toast.success('Welcome, Guest! 👋 Explore dashboard')
+              navigate('/dashboard')
+            } finally {
+              setLoading(false)
+            }
+          }}
+          disabled={loading}
+          style={{ width: '100%', marginTop: 12 }}
+        >
+          👋 Continue as Guest
+        </button>
 
         {/* Demo hint */}
         <div style={{
