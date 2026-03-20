@@ -1,83 +1,173 @@
-# API Reference (summary)
+# API Documentation
 
-This file documents the main backend endpoints provided by `backend/main.py`.
+## Overview
 
-Authentication
-- POST `/api/auth/register` — Register a new user
-  - Body: `{ "email": "...", "username": "...", "password": "..." }`
-  - Returns: `{ token, user }` on success
+The backend is built with FastAPI and exposes RESTful endpoints for authentication, file uploads, handwriting profile management, and note generation.
 
-- POST `/api/auth/login` — Login existing user
-  - Body: `{ "email": "...", "password": "..." }`
-  - Returns: `{ token, user }` on success
+All protected routes require a valid JWT token.
 
-- GET `/api/auth/me` — Get current user
-  - Headers: `Authorization: Bearer <token>`
+Base URL:
+http://localhost:8000
 
-Notes
-- POST `/api/notes/create` — Create a note from text
-  - Body: `{ title, content, subject, tags }`
+---
 
-- POST `/api/notes/generate` — Upload a file to generate a note with AI processing
-  - Form fields: `file` (UploadFile), `title`, `subject`, `tags` (JSON string), `sample_id` (optional)
+## Authentication
 
-- GET `/api/notes` — List notes (supports `subject`, `search`, `page`, `limit` query params)
+### POST /auth/login
 
-- GET `/api/notes/{note_id}` — Get a single note
+Authenticate user and return JWT token.
 
-- PATCH `/api/notes/{note_id}` — Update note title/tags/favorite
+Request:
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
 
-- DELETE `/api/notes/{note_id}` — Delete a note
+Response:
+{
+  "access_token": "jwt_token_here",
+  "token_type": "bearer"
+}
 
-# API Reference — quick and practical
+---
 
-Below are the main endpoints you'll use while developing or testing locally. The app also exposes interactive docs at `http://localhost:8000/docs` when the server is running.
+### POST /auth/register
 
-Authentication
-- POST `/api/auth/register`
-  - Use to create a new user.
-  - Body (JSON): `{ "email": "you@example.com", "username": "you", "password": "secret" }`
-  - Response: `{ token, user }` (token is a JWT you'll use for subsequent requests).
+Create a new user.
 
-- POST `/api/auth/login`
-  - Body: `{ "email": "you@example.com", "password": "secret" }`
-  - Response: `{ token, user }` on success.
+Request:
+{
+  "email": "user@example.com",
+  "username": "user",
+  "password": "password123"
+}
 
-- GET `/api/auth/me`
-  - Headers: `Authorization: Bearer <token>`
-  - Returns current user details.
+Response:
+{
+  "message": "User created successfully"
+}
 
-Notes
-- POST `/api/notes/create` — Create a note from plain text
-  - Body (JSON): `{ title, content, subject, tags }`
+---
 
-- POST `/api/notes/generate` — Upload a file and ask the AI to process it
-  - Form (multipart): `file` (upload), `title`, `subject`, `tags` (JSON string), optional `sample_id` to apply handwriting style.
+## File Upload & OCR
 
-- GET `/api/notes` — List notes
-  - Query params: `subject`, `search`, `page`, `limit`.
+### POST /upload
 
-- GET `/api/notes/{note_id}` — Fetch one note
+Upload an image or PDF for OCR processing.
 
-- PATCH `/api/notes/{note_id}` — Update a note (title/tags/is_favorite)
+Request:
+- multipart/form-data
+- file: image or pdf
 
-- DELETE `/api/notes/{note_id}` — Remove a note
+Response:
+{
+  "extracted_text": "Text extracted from the document"
+}
 
-Handwriting samples
-- POST `/api/samples/upload` — Upload an image of handwriting
-  - The server runs OCR (Tesseract) and optionally sends a prompt to Gemini to extract style data.
+---
 
-- GET `/api/samples` — List samples for the authenticated user
+## Handwriting Profiles
 
-Stats
-- GET `/api/notes/stats/summary` — Short summary: counts, favorites, sample count, and top subjects
+### POST /handwriting-profile
 
-Auth & tokens
-- Tokens are JWTs signed with `SECRET_KEY`. Keep that secret. If you change it, existing tokens stop working.
+Upload handwriting sample.
 
-DB init
-- On startup the backend runs a small SQL block to create missing tables. Look for `✅ Database initialized successfully` in the backend logs.
+Request:
+- image file
 
-Errors
-- `401` usually means missing/invalid/expired token.
-- If DB calls fail, confirm `DATABASE_URL` and that Postgres is running.
+Response:
+{
+  "profile_id": 1,
+  "message": "Handwriting profile created"
+}
+
+---
+
+### GET /handwriting-profile
+
+Retrieve all handwriting profiles for the user.
+
+Response:
+[
+  {
+    "id": 1,
+    "sample_name": "Sample 1",
+    "created_at": "timestamp"
+  }
+]
+
+---
+
+## Notes
+
+### POST /generate-notes
+
+Generate handwritten styled notes.
+
+Request:
+{
+  "content": "input text",
+  "profile_id": 1,
+  "subject": "Biology"
+}
+
+Response:
+{
+  "note_id": 10,
+  "generated_content": "styled handwritten text"
+}
+
+---
+
+### GET /notes
+
+Retrieve all notes.
+
+Response:
+[
+  {
+    "id": 10,
+    "title": "Biology Notes",
+    "subject": "Biology",
+    "is_favorite": false
+  }
+]
+
+---
+
+### POST /notes/favorite
+
+Mark note as favorite.
+
+Request:
+{
+  "note_id": 10
+}
+
+Response:
+{
+  "message": "Note marked as favorite"
+}
+
+---
+
+## Headers (for protected routes)
+
+Authorization: Bearer <JWT_TOKEN>
+
+---
+
+## Error Handling
+
+Standard error response:
+
+{
+  "detail": "Error message"
+}
+
+Common status codes:
+- 200 OK
+- 201 Created
+- 400 Bad Request
+- 401 Unauthorized
+- 500 Internal Server Error
