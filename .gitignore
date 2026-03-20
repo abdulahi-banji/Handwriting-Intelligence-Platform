@@ -1,4 +1,5 @@
 node_modules/
+test_db.py
 
 # Dependencies
 /backend/venv*/
