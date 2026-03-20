@@ -129,6 +129,7 @@ npm run dev
 • Train handwriting style embedding model  
 • Real-time handwriting rendering  
 • Mobile application  
+• Graphical illustration of material for enhanced learning
 • Collaborative note sharing  
 
 ---
