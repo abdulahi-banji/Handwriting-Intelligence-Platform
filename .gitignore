@@ -1,5 +1,5 @@
 node_modules/
-
+commands.md
 # Dependencies
 /backend/venv*/
 **/__pycache__/
