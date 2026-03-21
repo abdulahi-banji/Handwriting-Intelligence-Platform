@@ -1,6 +1,6 @@
 node_modules/
 commands.md
-tasks.md
+tasks.md 
 # Dependencies
 /backend/venv*/
 **/__pycache__/
