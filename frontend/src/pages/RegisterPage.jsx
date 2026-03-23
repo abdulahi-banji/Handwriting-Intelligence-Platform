@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import { FiEye, FiEyeOff } from 'react-icons/fi'
 import { useAuth } from '../hooks/useAuth'
 
 export default function RegisterPage() {
   const [form, setForm] = useState({ email: '', username: '', password: '', confirm: '' })
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
   const { register } = useAuth()
   const navigate = useNavigate()
@@ -69,24 +72,74 @@ export default function RegisterPage() {
 
           <div className="form-group">
             <label className="form-label">Password 🔑</label>
-            <input
-              className="form-input"
-              type="password"
-              placeholder="At least 6 characters"
-              value={form.password}
-              onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
-            />
+            <div style={{ position: 'relative' }}>
+              <input
+                className="form-input"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="At least 6 characters"
+                value={form.password}
+                onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
+                style={{ width: '100%', paddingRight: 38 }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                style={{
+                  position: 'absolute',
+                  right: 10,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  border: 'none',
+                  background: 'transparent',
+                  padding: 4,
+                  cursor: 'pointer',
+                  color: 'var(--ink-dark)',
+                  opacity: 0.85,
+                  fontSize: '1.1rem'
+                }}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                onMouseEnter={e => { e.currentTarget.style.opacity = '1'; }}
+                onMouseLeave={e => { e.currentTarget.style.opacity = '0.85'; }}
+              >
+                {showPassword ? <FiEyeOff /> : <FiEye />}
+              </button>
+            </div>
           </div>
 
           <div className="form-group">
             <label className="form-label">Confirm Password 🔐</label>
-            <input
-              className="form-input"
-              type="password"
-              placeholder="Same password again"
-              value={form.confirm}
-              onChange={e => setForm(p => ({ ...p, confirm: e.target.value }))}
-            />
+            <div style={{ position: 'relative' }}>
+              <input
+                className="form-input"
+                type={showConfirm ? 'text' : 'password'}
+                placeholder="Same password again"
+                value={form.confirm}
+                onChange={e => setForm(p => ({ ...p, confirm: e.target.value }))}
+                style={{ width: '100%', paddingRight: 38 }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirm(v => !v)}
+                style={{
+                  position: 'absolute',
+                  right: 10,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  border: 'none',
+                  background: 'transparent',
+                  padding: 4,
+                  cursor: 'pointer',
+                  color: 'var(--ink-dark)',
+                  opacity: 0.85,
+                  fontSize: '1.1rem'
+                }}
+                aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
+                onMouseEnter={e => { e.currentTarget.style.opacity = '1'; }}
+                onMouseLeave={e => { e.currentTarget.style.opacity = '0.85'; }}
+              >
+                {showConfirm ? <FiEyeOff /> : <FiEye />}
+              </button>
+            </div>
           </div>
 
           <button
