@@ -494,7 +494,7 @@ Key Takeaways:
 • Practice with examples
 • Connect ideas to prior knowledge
 
-💡 Note: Connect Gemini API for AI-powered restructuring!
+Note: Connect Gemini API for AI-powered restructuring!
 """
     
     try:
