@@ -8,14 +8,15 @@ This platform helps students retain information more effectively by allowing the
 
 # Features
 
-• Upload images, PDFs, or typed notes  
-• Extract text using OCR  
-• Containerized deployment with Docker
-• Generate notes styled after a user's handwriting  
-• Manage handwriting profiles  
-• Organize notes by subject  
-• Favorite important notes  
-• Secure JWT authentication  
+- Upload images, PDFs, or typed notes  
+- Extract text using OCR  
+- Containerized deployment with Docker  
+- Generate notes styled after a user's handwriting  
+- Manage handwriting profiles  
+- Organize notes by subject  
+- Favorite important notes  
+- Async file processing via task queue  
+- Secure JWT authentication (RS256)  
 
 ---
 
@@ -31,25 +32,26 @@ Backend
 - Python
 
 Machine Learning
-- Optical Character Recognition (OCR) 
+- Optical Character Recognition (OCR)
 - Handwriting style modeling
 
 Database
 - PostgreSQL
 
 Authentication
-- JWT Tokens
+- JWT Tokens (RS256)
 
 Infrastructure
 - Docker & Docker Compose
+- Nginx (reverse proxy)
 - GitHub Actions (CI/CD)
-
 
 ---
 
 # Architecture
 
-User → React Frontend → FastAPI Backend → File Processing Pipeline → OCR Extraction → Handwriting Style Generation → PostgreSQL Database
+User → React Frontend → Nginx Reverse Proxy → FastAPI Backend → Async Task Queue (Celery + Redis) → File Processing Pipeline → OCR Extraction → Handwriting Style Generation → PostgreSQL Database + Object Storage (S3)
+
 ---
 
 # Project Structure
@@ -66,14 +68,18 @@ frontend
   components  
   pages  
 
+infra  
+  docker-compose.yml  
+  nginx  
+  .env.example  
+
 tests  
+  unit  
+  integration  
 
 docs  
 
 ---
-
-
-
 
 # GETTING STARTED
 
@@ -83,6 +89,8 @@ git clone https://github.com/abdulahi-banji/Handwriting-Intelligence-Platform
 
 cd Handwriting-Intelligence-Platform
 
+cp infra/.env.example .env
+
 ---
 
 ## Backend Setup
@@ -90,8 +98,6 @@ cd Handwriting-Intelligence-Platform
 cd backend
 
 pip install -r requirements.txt
-
-run server
 
 uvicorn main:app --reload
 
@@ -107,25 +113,25 @@ npm run dev
 
 ---
 
-
 ## Run with Docker
+
 cd infra
 
 docker compose up --build
 
 ---
 
-
 ## Example Workflow
 
 1. User uploads handwriting sample
-2. Platform extracts style features
+2. Platform extracts and models handwriting style features
 3. User uploads PDF or image notes
-4. OCR extracts text
-5. AI renders notes in user handwriting
+4. OCR extracts text from the source
+5. Async task queue processes the job
+6. AI renders notes in user handwriting
+7. Structured notes are saved and organized by subject
 
 ---
-
 
 # CI/CD Pipeline
 
@@ -134,13 +140,15 @@ docker compose up --build
 3. Build — Docker image built and pushed to container registry
 4. Deploy — Automated deploy to staging on merge to main
 
+---
+
 # Future Improvements
 
-• Train handwriting style embedding model  
-• Real-time handwriting rendering  
-• Mobile application  
-• Graphical illustration of material for enhanced learning
-• Collaborative note sharing  
+- Train handwriting style embedding model  
+- Real-time handwriting rendering via WebSockets  
+- Mobile application  
+- Graphical illustration of material for enhanced learning  
+- Collaborative note sharing 
 
 ---
 
@@ -153,4 +161,4 @@ Please open an issue or submit a pull request.
 
 # License
 
-MIT License. 
+MIT License.
