@@ -49,20 +49,7 @@ Infrastructure
 
 # Architecture
 
-User
- 
-React Frontend
- ↓
-FastAPI Backend
- ↓
-File Processing Pipeline
- ↓
-OCR Extraction
- ↓
-Handwriting Style Generation
- ↓
-PostgreSQL Database
-
+User → React Frontend → FastAPI Backend → File Processing Pipeline → OCR Extraction → Handwriting Style Generation → PostgreSQL Database
 ---
 
 # Project Structure
