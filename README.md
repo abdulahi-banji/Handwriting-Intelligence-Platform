@@ -50,7 +50,7 @@ Infrastructure
 # Architecture
 
 User
- ↓
+ 
 React Frontend
  ↓
 FastAPI Backend
@@ -129,7 +129,7 @@ docker compose up --build
 ---
 
 
-# Example Workflow
+## Example Workflow
 
 1. User uploads handwriting sample
 2. Platform extracts style features
