@@ -10,6 +10,7 @@ This platform helps students retain information more effectively by allowing the
 
 • Upload images, PDFs, or typed notes  
 • Extract text using OCR  
+• Containerized deployment with Docker
 • Generate notes styled after a user's handwriting  
 • Manage handwriting profiles  
 • Organize notes by subject  
@@ -38,6 +39,11 @@ Database
 
 Authentication
 - JWT Tokens
+
+Infrastructure
+- Docker & Docker Compose
+- GitHub Actions (CI/CD)
+
 
 ---
 
@@ -114,6 +120,15 @@ npm run dev
 
 ---
 
+
+## Run with Docker
+cd infra
+
+docker compose up --build
+
+---
+
+
 # Example Workflow
 
 1. User uploads handwriting sample
@@ -123,6 +138,14 @@ npm run dev
 5. AI renders notes in user handwriting
 
 ---
+
+
+# CI/CD Pipeline
+
+1. Lint — Ruff (Python), ESLint (JavaScript)
+2. Test — pytest with coverage gate ≥ 80%
+3. Build — Docker image built and pushed to container registry
+4. Deploy — Automated deploy to staging on merge to main
 
 # Future Improvements
 
