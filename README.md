@@ -15,6 +15,7 @@ This platform helps students retain information more effectively by allowing the
 - Manage handwriting profiles  
 - Organize notes by subject  
 - Favorite important notes  
+- Structured logging and observability 
 - Async file processing via task queue  
 - Secure JWT authentication (RS256)  
 
@@ -73,6 +74,11 @@ infra
   nginx  
   .env.example  
 
+scripts  
+  seed_db.py  
+  run_tests.sh  
+  lint.sh  
+
 tests  
   unit  
   integration  
@@ -121,6 +127,24 @@ docker compose up --build
 
 ---
 
+
+## Developer Tooling
+
+Run linter
+
+bash scripts/lint.sh
+
+Run tests
+
+bash scripts/run_tests.sh
+
+Seed local database
+
+python scripts/seed_db.py
+
+---
+
+
 ## Example Workflow
 
 1. User uploads handwriting sample
@@ -139,6 +163,14 @@ docker compose up --build
 2. Test — pytest with coverage gate ≥ 80%
 3. Build — Docker image built and pushed to container registry
 4. Deploy — Automated deploy to staging on merge to main
+
+---
+
+# Observability
+
+- Structured JSON logging across all services  
+- Request IDs on all API responses for distributed tracing  
+- Error tracking hooks for production alerting  
 
 ---
 
