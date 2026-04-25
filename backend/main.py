@@ -15,6 +15,9 @@ from PIL import Image
 import io
 import psycopg2
 from psycopg2.extras import RealDictCursor
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # Try to import pytesseract, but don't fail if not available
 try:
@@ -33,6 +36,14 @@ if not SECRET_KEY:
 ALGORITHM = "HS256"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 DATABASE_URL = os.getenv("DATABASE_URL", "")
+
+# Email Configuration
+SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
+SMTP_EMAIL = os.getenv("SMTP_EMAIL", "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+SEND_EMAILS = os.getenv("SEND_EMAILS", "true").lower() == "true"
 
 # CORS allowed origins - allow all for now, can be restricted in production
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
