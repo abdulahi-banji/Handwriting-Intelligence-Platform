@@ -191,7 +191,7 @@ export default function TrashPage() {
                       borderColor: 'var(--coral)'
                     }}
                   >
-                    🗑️ Permanent
+                    🗑️ Permanently delete
                   </button>
                 </div>
               </div>
