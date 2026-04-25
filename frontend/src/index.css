@@ -950,7 +950,7 @@ h1, h2, h3, h4 {
 }
 
 /* ── Responsive ── */
-@media (max-width: 640px) {
+@media (max-width: 1046px) {
   :root { --sidebar-w: 0px; }
   .sidebar {
     width: 260px;
