@@ -20,14 +20,7 @@ export default function ForgotPasswordPage() {
     try {
       const res = await api.post('/auth/forgot-password', { email })
       setSent(true)
-      
-      // In development, show the reset link
-      if (res.data.reset_token) {
-        toast.success('Reset link generated! Check console or use link below.')
-        console.log('Reset Link:', res.data.reset_url)
-      } else {
-        toast.success('If this email exists, you\'ll receive a reset link')
-      }
+      toast.success('Check your email for the reset link! 📧')
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to send reset link')
     } finally {

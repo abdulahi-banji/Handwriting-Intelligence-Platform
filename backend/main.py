@@ -15,9 +15,6 @@ from PIL import Image
 import io
 import psycopg2
 from psycopg2.extras import RealDictCursor
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
 # Try to import pytesseract, but don't fail if not available
 try:
@@ -36,14 +33,6 @@ if not SECRET_KEY:
 ALGORITHM = "HS256"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 DATABASE_URL = os.getenv("DATABASE_URL", "")
-
-# Email Configuration
-SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
-SMTP_EMAIL = os.getenv("SMTP_EMAIL", "")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
-SEND_EMAILS = os.getenv("SEND_EMAILS", "true").lower() == "true"
 
 # CORS allowed origins - allow all for now, can be restricted in production
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
@@ -184,6 +173,106 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+# --- Email Helper ---
+def send_password_reset_email(email: str, reset_token: str) -> bool:
+    """Send password reset email. Returns True if sent, False if disabled or error."""
+    if not SEND_EMAILS:
+        print(f"ℹ️  Email sending disabled. Reset token for {email}: {reset_token}")
+        return False
+    
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        print(f"⚠️  Email credentials not configured. Reset token for {email}: {reset_token}")
+        return False
+    
+    try:
+        reset_url = f"{FRONTEND_URL}/reset-password?token={reset_token}"
+        
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "Reset Your Scribble Password"
+        msg["From"] = SMTP_EMAIL
+        msg["To"] = email
+        
+        # Plain text version
+        text = f"""Hello,
+
+We received a request to reset your Scribble password. Click the link below to create a new password:
+
+{reset_url}
+
+This link expires in 24 hours for security.
+
+If you didn't request this, please ignore this email.
+
+Best regards,
+Scribble Team"""
+        
+        # HTML version
+        html = f"""
+        <html>
+            <body style="font-family: 'Nunito', sans-serif; color: #2d241e;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <span style="font-size: 2.5rem;">✏️</span>
+                        <h1 style="color: #2d241e; margin: 10px 0 5px 0;">Scribble</h1>
+                        <p style="color: #a8a89e; margin: 0;">Handwriting Intelligence Platform</p>
+                    </div>
+                    
+                    <h2 style="color: #2d241e;">Reset Your Password</h2>
+                    <p>We received a request to reset your password. Click the button below to create a new password:</p>
+                    
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="{reset_url}" style="
+                            display: inline-block;
+                            background-color: #6366f1;
+                            color: white;
+                            padding: 12px 30px;
+                            text-decoration: none;
+                            border-radius: 8px;
+                            font-weight: bold;
+                            font-size: 16px;
+                        ">Reset Password</a>
+                    </div>
+                    
+                    <p>Or copy and paste this link in your browser:</p>
+                    <p style="background-color: #f5f5f5; padding: 10px; border-radius: 5px; word-break: break-all; font-size: 12px;">
+                        {reset_url}
+                    </p>
+                    
+                    <p style="color: #a8a89e; font-size: 14px; margin-top: 30px;">
+                        <strong>Security note:</strong> This link expires in 24 hours.
+                    </p>
+                    
+                    <p style="color: #a8a89e; font-size: 14px;">
+                        If you didn't request this email, please ignore it. Your password won't be changed unless you complete the reset.
+                    </p>
+                    
+                    <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 30px 0;">
+                    <p style="color: #a8a89e; font-size: 12px; text-align: center; margin: 0;">
+                        © 2026 Scribble. All rights reserved.
+                    </p>
+                </div>
+            </body>
+        </html>
+        """
+        
+        part1 = MIMEText(text, "plain")
+        part2 = MIMEText(html, "html")
+        msg.attach(part1)
+        msg.attach(part2)
+        
+        # Send email
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_EMAIL, SMTP_PASSWORD)
+            server.send_message(msg)
+        
+        print(f"✅ Password reset email sent to {email}")
+        return True
+    
+    except Exception as e:
+        print(f"❌ Failed to send email to {email}: {e}")
+        return False
+
 # --- Pydantic Models ---
 class RegisterRequest(BaseModel):
     email: EmailStr
@@ -254,7 +343,7 @@ async def get_me(payload=Depends(verify_token), db=Depends(get_db)):
 
 @app.post("/api/auth/forgot-password")
 async def forgot_password(data: ForgotPasswordRequest, db=Depends(get_db)):
-    """Generate a password reset token and return it (in production, send via email)"""
+    """Generate a password reset token and send via email"""
     cur = db.cursor()
     cur.execute("SELECT id FROM users WHERE email = %s", (data.email,))
     user = cur.fetchone()
@@ -279,13 +368,16 @@ async def forgot_password(data: ForgotPasswordRequest, db=Depends(get_db)):
     )
     db.commit()
     
-    # In production, send this token via email. For now, return it for development
-    # In a real app: send_reset_email(data.email, reset_token)
-    return {
-        "message": "Password reset link generated",
-        "reset_token": reset_token,  # Remove in production!
-        "reset_url": f"http://localhost:5173/reset-password?token={reset_token}"  # Development
-    }
+    # Send email
+    email_sent = send_password_reset_email(data.email, reset_token)
+    
+    # Return appropriate response
+    if email_sent or not SEND_EMAILS:
+        return {"message": "If this email exists, a reset link will be sent"}
+    else:
+        # Email sending failed but don't expose that to user for security
+        print(f"⚠️  Email failed to send to {data.email}")
+        return {"message": "If this email exists, a reset link will be sent"}
 
 @app.post("/api/auth/reset-password")
 async def reset_password(data: ResetPasswordRequest, db=Depends(get_db)):
