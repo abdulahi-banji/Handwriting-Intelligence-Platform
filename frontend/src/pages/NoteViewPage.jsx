@@ -54,10 +54,10 @@ export default function NoteViewPage() {
   }
 
   const deleteNote = async () => {
-    if (!confirm('Delete this note permanently?')) return
+    if (!confirm('Move this note to trash? You can recover it later.')) return
     try {
       await api.delete(`/notes/${id}`)
-      toast.success('Note deleted')
+      toast.success('Note moved to trash')
       navigate('/notes')
     } catch {
       toast.error('Delete failed')

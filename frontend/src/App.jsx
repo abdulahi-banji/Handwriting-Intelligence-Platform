@@ -11,6 +11,7 @@ import NoteViewPage from './pages/NoteViewPage'
 import GeneratePage from './pages/GeneratePage'
 import SamplesPage from './pages/SamplesPage'
 import FavoritesPage from './pages/FavoritesPage'
+import TrashPage from './pages/TrashPage'
 
 function ProtectedLayout({ children }) {
   const { user, loading } = useAuth()
@@ -78,6 +79,7 @@ function AppRoutes() {
       <Route path="/generate" element={<ProtectedLayout><GeneratePage /></ProtectedLayout>} />
       <Route path="/samples" element={<ProtectedLayout><SamplesPage /></ProtectedLayout>} />
       <Route path="/favorites" element={<ProtectedLayout><FavoritesPage /></ProtectedLayout>} />
+      <Route path="/trash" element={<ProtectedLayout><TrashPage /></ProtectedLayout>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

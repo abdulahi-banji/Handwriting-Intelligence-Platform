@@ -113,9 +113,36 @@ def init_db():
                 updated_at TIMESTAMP DEFAULT NOW()
             );
 
+            CREATE TABLE IF NOT EXISTS deleted_notes (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+                title VARCHAR(255) NOT NULL,
+                original_content TEXT,
+                processed_content TEXT,
+                style_applied VARCHAR(100),
+                subject VARCHAR(100),
+                tags TEXT[],
+                is_favorite BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP,
+                updated_at TIMESTAMP,
+                deleted_at TIMESTAMP DEFAULT NOW()
+            );
+
+            CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+                token VARCHAR(255) UNIQUE NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW(),
+                expires_at TIMESTAMP NOT NULL
+            );
+
             CREATE INDEX IF NOT EXISTS idx_notes_user_id ON notes(user_id);
             CREATE INDEX IF NOT EXISTS idx_notes_created_at ON notes(created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_deleted_notes_user_id ON deleted_notes(user_id);
+            CREATE INDEX IF NOT EXISTS idx_deleted_notes_deleted_at ON deleted_notes(deleted_at DESC);
             CREATE INDEX IF NOT EXISTS idx_samples_user_id ON handwriting_samples(user_id);
+            CREATE INDEX IF NOT EXISTS idx_reset_tokens_user_id ON password_reset_tokens(user_id);
+            CREATE INDEX IF NOT EXISTS idx_reset_tokens_token ON password_reset_tokens(token);
         """)
         conn.commit()
         cur.close()
@@ -167,6 +194,13 @@ class NoteUpdateRequest(BaseModel):
     is_favorite: Optional[bool] = None
     tags: Optional[List[str]] = None
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
 # --- Auth Routes ---
 @app.post("/api/auth/register")
 async def register(data: RegisterRequest, db=Depends(get_db)):
@@ -206,6 +240,73 @@ async def get_me(payload=Depends(verify_token), db=Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return dict(user)
+
+@app.post("/api/auth/forgot-password")
+async def forgot_password(data: ForgotPasswordRequest, db=Depends(get_db)):
+    """Generate a password reset token and return it (in production, send via email)"""
+    cur = db.cursor()
+    cur.execute("SELECT id FROM users WHERE email = %s", (data.email,))
+    user = cur.fetchone()
+    
+    if not user:
+        # Don't reveal if email exists (security best practice)
+        return {"message": "If this email exists, a reset link will be sent"}
+    
+    # Generate reset token
+    reset_token = str(uuid.uuid4())
+    expires_at = datetime.utcnow() + timedelta(hours=24)
+    
+    # Store reset token
+    cur.execute(
+        """DELETE FROM password_reset_tokens WHERE user_id = %s""",
+        (str(user["id"]),)
+    )
+    cur.execute(
+        """INSERT INTO password_reset_tokens (user_id, token, expires_at)
+           VALUES (%s, %s, %s)""",
+        (str(user["id"]), reset_token, expires_at)
+    )
+    db.commit()
+    
+    # In production, send this token via email. For now, return it for development
+    # In a real app: send_reset_email(data.email, reset_token)
+    return {
+        "message": "Password reset link generated",
+        "reset_token": reset_token,  # Remove in production!
+        "reset_url": f"http://localhost:5173/reset-password?token={reset_token}"  # Development
+    }
+
+@app.post("/api/auth/reset-password")
+async def reset_password(data: ResetPasswordRequest, db=Depends(get_db)):
+    """Reset password using a valid reset token"""
+    cur = db.cursor()
+    
+    # Find valid reset token
+    cur.execute(
+        """SELECT user_id FROM password_reset_tokens 
+           WHERE token = %s AND expires_at > NOW()""",
+        (data.reset_token,)
+    )
+    reset_record = cur.fetchone()
+    
+    if not reset_record:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
+    # Update password
+    hashed = bcrypt.hashpw(data.new_password.encode(), bcrypt.gensalt()).decode()
+    cur.execute(
+        "UPDATE users SET password_hash = %s WHERE id = %s",
+        (hashed, reset_record["user_id"])
+    )
+    
+    # Delete used token
+    cur.execute("DELETE FROM password_reset_tokens WHERE token = %s", (data.reset_token,))
+    db.commit()
+    
+    return {"message": "Password reset successfully"}
 
 # --- Handwriting Sample Routes ---
 @app.post("/api/samples/upload")
@@ -397,10 +498,94 @@ async def update_note(note_id: str, data: NoteUpdateRequest, payload=Depends(ver
 
 @app.delete("/api/notes/{note_id}")
 async def delete_note(note_id: str, payload=Depends(verify_token), db=Depends(get_db)):
+    """Move note to trash instead of permanently deleting"""
     cur = db.cursor()
-    cur.execute("DELETE FROM notes WHERE id = %s AND user_id = %s", (note_id, payload["sub"]))
+    
+    # Get the note to move to deleted_notes
+    cur.execute("SELECT * FROM notes WHERE id = %s AND user_id = %s", (note_id, payload["sub"]))
+    note = cur.fetchone()
+    
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    
+    # Move to deleted_notes
+    cur.execute(
+        """INSERT INTO deleted_notes (id, user_id, title, original_content, processed_content, 
+           style_applied, subject, tags, is_favorite, created_at, updated_at)
+           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+        (note["id"], note["user_id"], note["title"], note["original_content"], 
+         note["processed_content"], note["style_applied"], note["subject"], 
+         note["tags"], note["is_favorite"], note["created_at"], note["updated_at"])
+    )
+    
+    # Delete from notes
+    cur.execute("DELETE FROM notes WHERE id = %s", (note_id,))
     db.commit()
-    return {"message": "Note deleted"}
+    
+    return {"message": "Note moved to trash"}
+
+@app.get("/api/trash")
+async def get_trash(page: int = 1, limit: int = 12, payload=Depends(verify_token), db=Depends(get_db)):
+    """Get deleted notes (trash) for the current user"""
+    cur = db.cursor()
+    offset = (page - 1) * limit
+    
+    cur.execute(
+        """SELECT id, title, subject, tags, is_favorite, deleted_at, 
+                  LEFT(processed_content, 200) as preview FROM deleted_notes 
+           WHERE user_id = %s ORDER BY deleted_at DESC LIMIT %s OFFSET %s""",
+        (payload["sub"], limit, offset)
+    )
+    deleted_notes = cur.fetchall()
+    
+    # Count total
+    cur.execute("SELECT COUNT(*) FROM deleted_notes WHERE user_id = %s", (payload["sub"],))
+    total = cur.fetchone()["count"]
+    
+    return {
+        "deleted_notes": [dict(n) for n in deleted_notes],
+        "total": total,
+        "page": page,
+        "pages": -(-total // limit)
+    }
+
+@app.post("/api/trash/{note_id}/restore")
+async def restore_note(note_id: str, payload=Depends(verify_token), db=Depends(get_db)):
+    """Restore a deleted note from trash"""
+    cur = db.cursor()
+    
+    # Get the deleted note
+    cur.execute("SELECT * FROM deleted_notes WHERE id = %s AND user_id = %s", (note_id, payload["sub"]))
+    note = cur.fetchone()
+    
+    if not note:
+        raise HTTPException(status_code=404, detail="Deleted note not found")
+    
+    # Restore to notes
+    cur.execute(
+        """INSERT INTO notes (id, user_id, title, original_content, processed_content, 
+           style_applied, subject, tags, is_favorite, created_at, updated_at)
+           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+        (note["id"], note["user_id"], note["title"], note["original_content"],
+         note["processed_content"], note["style_applied"], note["subject"],
+         note["tags"], note["is_favorite"], note["created_at"], note["updated_at"])
+    )
+    
+    # Delete from trash
+    cur.execute("DELETE FROM deleted_notes WHERE id = %s", (note_id,))
+    db.commit()
+    
+    return {"message": "Note restored from trash"}
+
+@app.delete("/api/trash/{note_id}")
+async def permanently_delete_note(note_id: str, payload=Depends(verify_token), db=Depends(get_db)):
+    """Permanently delete a note from trash"""
+    cur = db.cursor()
+    cur.execute("DELETE FROM deleted_notes WHERE id = %s AND user_id = %s", (note_id, payload["sub"]))
+    if cur.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Deleted note not found")
+    db.commit()
+    return {"message": "Note permanently deleted"}
 
 @app.get("/api/notes/stats/summary")
 async def get_stats(payload=Depends(verify_token), db=Depends(get_db)):

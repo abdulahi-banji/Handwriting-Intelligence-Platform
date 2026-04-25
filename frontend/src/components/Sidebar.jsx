@@ -7,6 +7,7 @@ const NAV = [
   { to: '/generate', icon: '✨', label: 'Generate Note' },
   { to: '/samples', icon: '🖊️', label: 'Handwriting' },
   { to: '/favorites', icon: '⭐', label: 'Favorites' },
+  { to: '/trash', icon: '🗑️', label: 'Trash' },
 ]
 
 export default function Sidebar({ onClose }) {
