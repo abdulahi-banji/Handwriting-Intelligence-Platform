@@ -10,7 +10,7 @@ const NAV = [
   { to: '/trash', icon: '🗑️', label: 'Trash' },
 ]
 
-export default function Sidebar({ onClose }) {
+export default function Sidebar({ onClose, className = '' }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
 
@@ -22,7 +22,7 @@ export default function Sidebar({ onClose }) {
   const initials = user?.username?.slice(0, 2).toUpperCase() || '?'
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${className}`}>
       <div className="sidebar-logo">
         <h1>
           ✏️ Scribble

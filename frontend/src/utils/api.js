@@ -4,7 +4,6 @@ import axios from 'axios'
 // In production (Vercel), we MUST have VITE_API_URL set in Vercel dashboard
 // In development, use relative path or localhost
 const getBaseURL = () => {
-  // Check if we're in production (Vite sets this automatically)
   if (import.meta.env.PROD) {
     // Production: use the environment variable
     // NOTE: For production, you MUST set VITE_API_URL in Vercel dashboard

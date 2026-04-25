@@ -34,14 +34,11 @@ function ProtectedLayout({ children }) {
       {sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(45,36,22,0.3)',
-            zIndex: 99, display: 'none'
-          }}
+          className="mobile-overlay"
         />
       )}
 
-      <Sidebar onClose={() => setSidebarOpen(false)} />
+      <Sidebar onClose={() => setSidebarOpen(false)} className={sidebarOpen ? 'open' : ''} />
 
       <div className="main-content">
         {/* Mobile top bar */}
