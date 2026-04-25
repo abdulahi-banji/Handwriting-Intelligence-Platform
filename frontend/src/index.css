@@ -285,6 +285,9 @@ h1, h2, h3, h4 {
 
 .top-bar .spacer { flex: 1; }
 
+/* Hide hamburger menu on larger screens */
+.top-bar .icon-btn { display: none; }
+
 .search-bar {
   display: flex;
   align-items: center;
