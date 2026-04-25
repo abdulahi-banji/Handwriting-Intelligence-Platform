@@ -46,7 +46,7 @@ function ProtectedLayout({ children }) {
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="icon-btn"
-            style={{ display: 'none', fontSize: '1.2rem' }}
+            style={{ fontSize: '1.2rem' }}
           >
             ☰
           </button>
