@@ -225,10 +225,33 @@ async def login(data: LoginRequest, db=Depends(get_db)):
     cur = db.cursor()
     cur.execute("SELECT * FROM users WHERE email = %s", (data.email,))
     user = cur.fetchone()
+    if not user:
+        raise HTTPException(status_code=404, detail="Email does not exist")
+
+    if not bcrypt.checkpw(data.password.encode(), user["password_hash"].encode()):
+        raise HTTPException(status_code=401, detail="Incorrect password")
     
-    if not user or not bcrypt.checkpw(data.password.encode(), user["password_hash"].encode()):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    
+    token = create_token(str(user["id"]), user["email"])
+    return {"token": token, "user": {"id": str(user["id"]), "email": user["email"], "username": user["username"]}}
+
+@app.post("/api/auth/guest")
+async def guest_login(db=Depends(get_db)):
+    cur = db.cursor()
+    guest_email = "guest@test.com"
+    guest_username = "Guest"
+    cur.execute("SELECT * FROM users WHERE email = %s", (guest_email,))
+    user = cur.fetchone()
+
+    if not user:
+        guest_password = bcrypt.hashpw("guest".encode(), bcrypt.gensalt()).decode()
+        user_id = str(uuid.uuid4())
+        cur.execute(
+            "INSERT INTO users (id, email, username, password_hash) VALUES (%s, %s, %s, %s)",
+            (user_id, guest_email, guest_username, guest_password)
+        )
+        db.commit()
+        user = {"id": user_id, "email": guest_email, "username": guest_username}
+
     token = create_token(str(user["id"]), user["email"])
     return {"token": token, "user": {"id": str(user["id"]), "email": user["email"], "username": user["username"]}}
 

@@ -8,13 +8,15 @@ export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  const { login } = useAuth()
+  const [error, setError] = useState('')
+  const { login, guestLogin } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setError('')
     if (!form.email || !form.password) {
-      toast.error('Please fill in all fields')
+      setError('Please fill in all fields')
       return
     }
     setLoading(true)
@@ -23,7 +25,7 @@ export default function LoginPage() {
       toast.success('Welcome back! 🎉')
       navigate('/dashboard')
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Login failed')
+      setError(err.response?.data?.detail || 'Login failed')
     } finally {
       setLoading(false)
     }
@@ -46,6 +48,7 @@ export default function LoginPage() {
             {e}
           </div>
         ))}
+
       </div>
 
       <div className="auth-card" style={{ position: 'relative' }}>
@@ -54,6 +57,10 @@ export default function LoginPage() {
         </div>
         <h1>Welcome back!</h1>
         <p className="auth-tagline">Sign in to your note-taking studio</p>
+
+        {error && (
+          <div className="auth-error">{error}</div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -131,21 +138,18 @@ export default function LoginPage() {
         <button
           type="button"
           className="btn btn-outline"
-          onClick={async () => {
-            setLoading(true)
-            try {
-              await login('guest@test.com', 'guest')
-              toast.success('Welcome, Guest! 👋 Explore without account')
-              navigate('/dashboard')
-            } catch {
-              // Mock localStorage directly if API fails
-              localStorage.setItem('token', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5M2E4NmNlYi1kYWJjLTQ1NmYtOGU1YS0zMjcyZTViN2JjY2MiLCJlbWFpbCI6ImRlbW9AdGVzdC5jb20iLCJleHAiOjE5OTk5OTk5OTk5fQ.dummy_guest')
-              localStorage.setItem('user', JSON.stringify({id:'93a86ceb-dabc-456f-8e5a-3272e5b7bccc', email:'guest@test.com', username:'Guest'}))
-              toast.success('Welcome, Guest! 👋 Explore dashboard')
-              navigate('/dashboard')
-            } finally {
-              setLoading(false)
-            }
+            onClick={async () => {
+              setError('')
+              setLoading(true)
+              try {
+                await guestLogin()
+                toast.success('Welcome, Guest! 👋 Explore dashboard')
+                navigate('/dashboard')
+              } catch (err) {
+                setError(err.response?.data?.detail || 'Guest login failed')
+              } finally {
+                setLoading(false)
+              }
           }}
           disabled={loading}
           style={{ width: '100%', marginTop: 12 }}
@@ -161,6 +165,7 @@ export default function LoginPage() {
           color: 'var(--ink-light)', fontFamily: 'var(--font-note)'
         }}>
           💡 <strong>First time?</strong> Register an account above!!
+          
         </div>
       </div>
     </div>

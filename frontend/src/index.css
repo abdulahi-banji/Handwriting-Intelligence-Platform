@@ -868,6 +868,17 @@ h1, h2, h3, h4 {
   margin-bottom: 28px;
 }
 
+.auth-error {
+  background: #ffe4e0;
+  border: 1px solid #f4b4ac;
+  color: #7f2f24;
+  padding: 12px 14px;
+  border-radius: 12px;
+  margin-bottom: 18px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
 /* ── Divider ── */
 .divider {
   border: none;
